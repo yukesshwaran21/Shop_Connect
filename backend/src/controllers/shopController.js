@@ -20,7 +20,16 @@ export const getMyShops = async (req, res) => {
 
 export const createShop = async (req, res) => {
   try {
-    const { shopName, logo, description, address, city, category, contactNumber } = req.body;
+    const {
+      shopName,
+      logo,
+      paymentQrCode,
+      description,
+      address,
+      city,
+      category,
+      contactNumber,
+    } = req.body;
 
     if (!shopName || !address || !city || !category || !contactNumber) {
       return res.status(400).json({ message: 'Missing required shop information' });
@@ -32,13 +41,14 @@ export const createShop = async (req, res) => {
     }
 
     const shop = await Shop.create({
-      shopName,
+      shopName: shopName.trim(),
       logo: logo || '',
+      paymentQrCode: paymentQrCode || '',
       description: description || '',
-      address,
-      city,
-      category,
-      contactNumber,
+      address: address.trim(),
+      city: city.trim(),
+      category: category.trim(),
+      contactNumber: contactNumber.trim(),
       ownerId: req.user._id,
     });
 
@@ -54,6 +64,11 @@ export const getShopById = async (req, res) => {
     if (!shop) {
       return res.status(404).json({ message: 'Shop not found' });
     }
+
+    if (req.user && req.user.role === 'SHOP_OWNER' && shop.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You do not have access to this shop' });
+    }
+
     res.json(shop);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to fetch shop' });
@@ -86,10 +101,14 @@ export const updateShop = async (req, res) => {
       return res.status(403).json({ message: 'You can only update your own shop' });
     }
 
-    const fields = ['shopName', 'logo', 'description', 'address', 'city', 'category', 'contactNumber'];
+    const fields = ['shopName', 'logo', 'paymentQrCode', 'description', 'address', 'city', 'category', 'contactNumber'];
     fields.forEach((field) => {
       if (req.body[field] !== undefined) {
-        shop[field] = req.body[field];
+        if (typeof req.body[field] === 'string') {
+          shop[field] = req.body[field].trim();
+        } else {
+          shop[field] = req.body[field];
+        }
       }
     });
 

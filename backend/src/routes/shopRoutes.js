@@ -7,7 +7,13 @@ const router = express.Router();
 router.get('/', getShops);
 router.get('/my-shops', protect, authorizeRoles('SHOP_OWNER'), getMyShops);
 router.get('/search', searchShops);
-router.get('/:shopId', getShopById);
+router.get('/:shopId', (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return protect(req, res, () => next());
+  }
+  return next();
+}, getShopById);
 router.post('/', protect, authorizeRoles('SHOP_OWNER'), createShop);
 router.put('/:shopId', protect, authorizeRoles('SHOP_OWNER'), updateShop);
 

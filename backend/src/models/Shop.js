@@ -4,6 +4,7 @@ const shopSchema = new mongoose.Schema(
   {
     shopName: { type: String, required: true, trim: true },
     logo: { type: String, default: '' },
+    paymentQrCode: { type: String, default: '' },
     description: { type: String, default: '' },
     address: { type: String, required: true },
     city: { type: String, required: true, trim: true },

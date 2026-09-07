@@ -38,6 +38,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'Server error' });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Stop the existing backend process or choose another PORT.`);
+    process.exit(1);
+  }
+
+  throw error;
 });
