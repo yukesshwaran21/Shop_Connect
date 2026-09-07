@@ -1,10 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 
-const AuthContext = createContext(null);
+const defaultAuthValue = {
+  user: null,
+  loading: false,
+  login: () => {},
+  logout: () => {},
+};
+
+const AuthContext = createContext(defaultAuthValue);
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  return context ?? defaultAuthValue;
 }
 
 export default function AuthProvider({ children }) {

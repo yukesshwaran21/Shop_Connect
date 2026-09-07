@@ -3,6 +3,8 @@ import AuthProvider, { useAuth } from './context/AuthContext';
 import CartProvider from './context/CartContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import OwnerRegisterPage from './pages/OwnerRegisterPage';
+import AdminRegisterPage from './pages/AdminRegisterPage';
 import UserHomePage from './pages/UserHomePage';
 import ShopSearchResultsPage from './pages/ShopSearchResultsPage';
 import ShopDetailsPage from './pages/ShopDetailsPage';
@@ -32,6 +34,8 @@ function AppRoutes() {
       <Route path="/" element={<UserHomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/owner-register" element={<OwnerRegisterPage />} />
+      <Route path="/admin-register" element={<AdminRegisterPage />} />
       <Route path="/search" element={<ShopSearchResultsPage />} />
       <Route path="/shop/:shopId" element={<ShopDetailsPage />} />
       <Route path="/cart" element={<CartPage />} />

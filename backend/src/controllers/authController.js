@@ -4,15 +4,30 @@ import generateToken from '../utils/generateToken.js';
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role = 'USER' } = req.body;
+    const { name, email, password, role = 'USER', ownerId } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const allowedRoles = ['ADMIN', 'SHOP_OWNER', 'USER'];
+    const normalizedRole = role && allowedRoles.includes(role) ? role : 'USER';
+
+    if (normalizedRole === 'SHOP_OWNER' && !ownerId) {
+      return res.status(400).json({ message: 'Owner ID is required for shop owners' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    if (normalizedRole === 'SHOP_OWNER') {
+      const existingOwnerId = await User.findOne({ ownerId });
+      if (existingOwnerId) {
+        return res.status(400).json({ message: 'Owner ID is already in use' });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -20,9 +35,10 @@ export const registerUser = async (req, res) => {
 
     const user = await User.create({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password: hashedPassword,
-      role,
+      role: normalizedRole,
+      ownerId: normalizedRole === 'SHOP_OWNER' ? ownerId : undefined,
     });
 
     res.status(201).json({
@@ -30,6 +46,7 @@ export const registerUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      ownerId: user.ownerId,
       token: generateToken(user._id),
     });
   } catch (error) {

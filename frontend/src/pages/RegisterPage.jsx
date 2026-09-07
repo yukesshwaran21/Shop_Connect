@@ -6,7 +6,13 @@ import { useAuth } from '../context/AuthContext';
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'USER',
+    ownerId: '',
+  });
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
@@ -18,10 +24,18 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const response = await api.post('/auth/register', { ...form, role: 'USER' });
+      const payload = {
+        ...form,
+        role: form.role || 'USER',
+      };
+
+      const response = await api.post('/auth/register', payload);
       const { token, ...userData } = response.data;
       login(userData, token);
-      navigate('/');
+
+      if (userData.role === 'SHOP_OWNER') navigate('/owner-dashboard');
+      else if (userData.role === 'ADMIN') navigate('/admin-dashboard');
+      else navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     }
@@ -30,8 +44,14 @@ export default function RegisterPage() {
   return (
     <div className="container">
       <form className="form-box" onSubmit={handleSubmit}>
-        <h2>Create User Account</h2>
+        <h2>Create Account</h2>
         {error && <p style={{ color: 'crimson' }}>{error}</p>}
+
+        <select className="select" name="role" value={form.role} onChange={handleChange}>
+          <option value="USER">User</option>
+          <option value="SHOP_OWNER">Shop Owner</option>
+        </select>
+
         <input
           className="input"
           type="text"
@@ -50,6 +70,17 @@ export default function RegisterPage() {
           onChange={handleChange}
           required
         />
+        {form.role === 'SHOP_OWNER' && (
+          <input
+            className="input"
+            type="text"
+            name="ownerId"
+            placeholder="Owner ID"
+            value={form.ownerId}
+            onChange={handleChange}
+            required
+          />
+        )}
         <input
           className="input"
           type="password"
@@ -62,6 +93,9 @@ export default function RegisterPage() {
         <button className="button" type="submit">Register</button>
         <p>
           Already have an account? <Link to="/login">Login</Link>
+        </p>
+        <p>
+          Create shop owner account? <Link to="/owner-register">Owner Register</Link>
         </p>
       </form>
     </div>

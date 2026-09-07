@@ -58,6 +58,9 @@ export default function LoginPage() {
           Need an account? <Link to="/register">Register</Link>
         </p>
         <p>
+          Shop owner register? <Link to="/owner-register">Owner Register</Link>
+        </p>
+        <p>
           Shop owner? <Link to="/owner-login">Owner Login</Link>
         </p>
         <p>
