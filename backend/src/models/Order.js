@@ -57,6 +57,9 @@ const orderSchema = new mongoose.Schema(
       enum: ['Pending', 'Paid', 'Failed'],
       default: 'Pending',
     },
+    paymentMethod: { type: String, enum: ['QR_UPI'], default: 'QR_UPI' },
+    paymentConfirmationSubmitted: { type: Boolean, default: false },
+    paymentConfirmationAt: { type: Date, default: null },
     orderStatus: {
       type: String,
       enum: ['Pending', 'Confirmed', 'Processing', 'Ready', 'Completed', 'Cancelled'],

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getAuthHeaders } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -12,6 +12,24 @@ export default function CheckoutPage() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [order, setOrder] = useState(null);
   const [delivery, setDelivery] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', pincode: '' });
+  const [payment, setPayment] = useState(null);
+  const [paymentMessage, setPaymentMessage] = useState('');
+
+  useEffect(() => {
+    const shopId = items[0]?.shopId;
+    if (!shopId) return;
+    api.get(`/shops/${shopId}`)
+      .then((response) => setPayment({ shopName: response.data.shopName, ...response.data.payment }))
+      .catch(() => setPayment(null));
+  }, [items]);
+
+  const confirmPayment = async () => {
+    try {
+      const response = await api.patch(`/orders/${order._id}/payment-confirmation`, {}, { headers: getAuthHeaders() });
+      setOrder(response.data);
+      setPaymentMessage('Payment confirmation submitted. The shop owner will verify your payment.');
+    } catch (error) { setPaymentMessage(error.response?.data?.message || 'Unable to submit payment confirmation.'); }
+  };
 
   const applyCoupon = async () => {
     setCouponMessage('');
@@ -45,8 +63,6 @@ export default function CheckoutPage() {
       couponCode: appliedCoupon?.couponCode,
       couponId: appliedCoupon?.couponId,
       deliveryAddress: delivery,
-      paymentStatus: 'Pending',
-      orderStatus: 'Pending',
     };
 
     setPlacingOrder(true);
@@ -68,8 +84,10 @@ export default function CheckoutPage() {
             <h3>Order Placed Successfully!</h3>
             <p>Order ID: {order._id}</p>
             <p>Total: ₹{order.totalAmount}</p>
-            <p>Payment: Pending</p>
-            <p>Status: Pending</p>
+            <p>Payment: {order.paymentStatus}</p>
+            <p>Status: {order.orderStatus}</p>
+            {order.paymentConfirmationSubmitted ? <p>Payment confirmation submitted. The shop owner will verify your payment.</p> : <button className="button" type="button" onClick={confirmPayment}>I've Completed Payment</button>}
+            {paymentMessage && <p>{paymentMessage}</p>}
             <button className="button" type="button" onClick={() => navigate('/my-orders')}>View My Orders</button>
           </>
         ) : items.length === 0 ? (
@@ -90,6 +108,17 @@ export default function CheckoutPage() {
             {appliedCoupon && <p>Coupon {appliedCoupon.couponCode}: -₹{appliedCoupon.discount} <button className="button" type="button" onClick={() => { setAppliedCoupon(null); setCouponMessage('Coupon removed.'); }}>Remove</button></p>}
             <p>Subtotal: ₹{appliedCoupon?.subtotal ?? subtotal}</p>
             <h3>Final Total: ₹{appliedCoupon?.finalAmount ?? subtotal}</h3>
+            <section className="card mb-2">
+              <h3>Payment</h3>
+              {payment?.qrCode || payment?.upiId ? <>
+                <h4>{payment.displayName || payment.shopName}</h4>
+                {payment.qrCode && <img src={payment.qrCode} alt="Shop payment QR code" style={{ width: 220, height: 220, objectFit: 'contain' }} />}
+                {payment.upiId && <p>UPI ID: {payment.upiId}</p>}
+                <p>Amount to Pay: ₹{appliedCoupon?.finalAmount ?? subtotal}</p>
+                {payment.instructions && <p>{payment.instructions}</p>}
+              </> : <p>Online QR payment is not available for this shop.</p>}
+            </section>
+            {paymentMessage && <p>{paymentMessage}</p>}
             <button className="button" type="button" onClick={handlePlaceOrder} disabled={placingOrder}>{placingOrder ? 'Placing...' : 'Place Order'}</button>
           </>
         )}

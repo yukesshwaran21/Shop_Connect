@@ -15,6 +15,7 @@ import OwnerLoginPage from './pages/OwnerLoginPage';
 import OwnerDashboardPage from './pages/OwnerDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminLoginPage from './pages/AdminLoginPage';
+import OwnerPaymentSettingsPage from './pages/OwnerPaymentSettingsPage';
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
   const { user, loading } = useAuth();
@@ -42,6 +43,10 @@ function AppRoutes() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/my-orders" element={<MyOrdersPage />} />
       <Route path="/owner-login" element={<OwnerLoginPage />} />
+      <Route
+        path="/owner-payment-settings"
+        element={<ProtectedRoute allowedRoles={['SHOP_OWNER']}><OwnerPaymentSettingsPage /></ProtectedRoute>}
+      />
       <Route path="/admin-login" element={<AdminLoginPage />} />
       <Route
         path="/owner-dashboard"

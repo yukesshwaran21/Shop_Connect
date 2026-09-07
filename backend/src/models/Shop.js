@@ -5,6 +5,12 @@ const shopSchema = new mongoose.Schema(
     shopName: { type: String, required: true, trim: true },
     logo: { type: String, default: '' },
     paymentQrCode: { type: String, default: '' },
+    payment: {
+      upiId: { type: String, default: '', trim: true },
+      qrCode: { type: String, default: '' },
+      displayName: { type: String, default: '', trim: true },
+      instructions: { type: String, default: '', trim: true },
+    },
     description: { type: String, default: '' },
     address: { type: String, required: true },
     city: { type: String, required: true, trim: true },

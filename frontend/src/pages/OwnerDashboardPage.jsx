@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import OwnerOfferManagement from '../components/OwnerOfferManagement';
 import OwnerCouponManagement from '../components/OwnerCouponManagement';
 import OwnerOrderManagement from '../components/OwnerOrderManagement';
+import { Link } from 'react-router-dom';
 
 const emptyForm = {
   shopName: '',
@@ -220,6 +221,7 @@ export default function OwnerDashboardPage() {
       <div className="card">
         <h2>Shop Owner Dashboard</h2>
         <p>Owner: {user?.name}</p>
+        <nav className="row"><Link className="button" to="/owner-dashboard">Dashboard</Link><Link className="button" to="/owner-payment-settings">Payment Settings</Link></nav>
       </div>
 
       <form className="card" onSubmit={handleSubmit}>

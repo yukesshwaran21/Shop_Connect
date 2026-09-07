@@ -35,6 +35,15 @@ export default function OwnerOrderManagement() {
     } catch (error) { setMessage(error.response?.data?.message || 'Unable to update order status.'); }
   };
 
+  const updatePayment = async (order, paymentStatus) => {
+    try {
+      const response = await api.patch(`/orders/${order._id}/payment-status`, { paymentStatus }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setOrders((current) => current.map((item) => item._id === order._id ? { ...item, ...response.data } : item));
+      setSelectedOrder((current) => current?._id === order._id ? { ...current, ...response.data } : current);
+      setMessage(`Payment marked ${paymentStatus.toLowerCase()}.`);
+    } catch (error) { setMessage(error.response?.data?.message || 'Unable to update payment status.'); }
+  };
+
   return (
     <section className="card">
       <h3>Orders</h3>
@@ -66,6 +75,9 @@ export default function OwnerOrderManagement() {
         <p>Subtotal: ₹{selectedOrder.subtotal} | Coupon: {selectedOrder.couponCode || 'None'} (-₹{selectedOrder.couponDiscount || 0})</p>
         {(selectedOrder.items || selectedOrder.products || []).map((item) => <p key={`${selectedOrder._id}-detail-${item.productId}`}>{item.productName || item.name} x {item.quantity} at ₹{item.unitPrice || item.price} = ₹{item.totalPrice || item.price * item.quantity}</p>)}
         <p>Total: ₹{selectedOrder.totalAmount} | Payment: {selectedOrder.paymentStatus}</p>
+        {selectedOrder.paymentConfirmationSubmitted && <p>Customer has indicated payment completion.</p>}
+        <button className="button" type="button" onClick={() => updatePayment(selectedOrder, 'PAID')} disabled={selectedOrder.paymentStatus === 'Paid'}>Mark Payment as Paid</button>{' '}
+        <button className="button secondary" type="button" onClick={() => updatePayment(selectedOrder, 'FAILED')} disabled={selectedOrder.paymentStatus === 'Failed'}>Mark Payment as Failed</button>
         <select className="select" value={statusLabel(selectedOrder.orderStatus)} onChange={(event) => updateStatus(selectedOrder, event.target.value)} disabled={statusLabel(selectedOrder.orderStatus) === 'Completed' || statusLabel(selectedOrder.orderStatus) === 'Cancelled'}>
           {statuses.slice(1).map((status) => <option key={status} value={status}>{status}</option>)}
         </select>

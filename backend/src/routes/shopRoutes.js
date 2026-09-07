@@ -1,11 +1,13 @@
 import express from 'express';
-import { createShop, getDiscoveryOptions, getMyShops, getShops, getShopById, searchShops, updateShop } from '../controllers/shopController.js';
+import { createShop, getDiscoveryOptions, getMyPaymentSettings, getMyShops, getShops, getShopById, searchShops, updateMyPaymentSettings, updateShop } from '../controllers/shopController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.get('/', getShops);
 router.get('/my-shops', protect, authorizeRoles('SHOP_OWNER'), getMyShops);
+router.get('/my-shop/payment', protect, authorizeRoles('SHOP_OWNER'), getMyPaymentSettings);
+router.put('/my-shop/payment', protect, authorizeRoles('SHOP_OWNER'), updateMyPaymentSettings);
 router.get('/discovery-options', getDiscoveryOptions);
 router.get('/search', searchShops);
 router.get('/:shopId', (req, res, next) => {

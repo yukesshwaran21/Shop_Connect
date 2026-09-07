@@ -209,3 +209,39 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message || 'Failed to update order status' });
   }
 };
+
+export const submitPaymentConfirmation = async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.orderId, userId: req.user._id });
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    order.paymentConfirmationSubmitted = true;
+    order.paymentConfirmationAt = new Date();
+    await order.save();
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to submit payment confirmation' });
+  }
+};
+
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    const shop = await Shop.findOne({ _id: order.shopId, ownerId: req.user._id });
+    if (!shop) return res.status(403).json({ message: 'You can only verify payments for your own shop' });
+
+    const requestedStatus = req.body.paymentStatus;
+    const normalizedStatus = requestedStatus
+      ? `${requestedStatus.charAt(0).toUpperCase()}${requestedStatus.slice(1).toLowerCase()}`
+      : '';
+    if (!['Paid', 'Failed'].includes(normalizedStatus)) {
+      return res.status(400).json({ message: 'Payment status must be Paid or Failed' });
+    }
+
+    order.paymentStatus = normalizedStatus;
+    await order.save();
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to update payment status' });
+  }
+};

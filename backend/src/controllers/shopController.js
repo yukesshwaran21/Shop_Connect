@@ -3,7 +3,7 @@ import Product from '../models/Product.js';
 
 export const getShops = async (req, res) => {
   try {
-    const shops = await Shop.find().sort({ createdAt: -1 });
+    const shops = await Shop.find().select('-ownerId -paymentQrCode -payment').sort({ createdAt: -1 });
     res.json(shops);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to fetch shops' });
@@ -34,6 +34,10 @@ export const createShop = async (req, res) => {
 
     if (!shopName || !address || !city || !category || !contactNumber) {
       return res.status(400).json({ message: 'Missing required shop information' });
+    }
+
+    if (paymentQrCode && !isValidQrCode(paymentQrCode)) {
+      return res.status(400).json({ message: 'QR code must be a supported image under 5 MB' });
     }
 
     const existing = await Shop.findOne({ ownerId: req.user._id, shopName: new RegExp(shopName, 'i') });
@@ -78,9 +82,65 @@ export const getShopById = async (req, res) => {
       address: shop.address,
       city: shop.city,
       contactNumber: shop.contactNumber,
+      payment: {
+        upiId: shop.payment?.upiId || '',
+        qrCode: shop.payment?.qrCode || shop.paymentQrCode || '',
+        displayName: shop.payment?.displayName || shop.shopName,
+        instructions: shop.payment?.instructions || '',
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to fetch shop' });
+  }
+};
+
+const isValidQrCode = (value) => !value || (
+  typeof value === 'string'
+  && value.length <= 7 * 1024 * 1024
+  && /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(value)
+);
+
+const paymentResponse = (shop) => ({
+  upiId: shop.payment?.upiId || '',
+  qrCode: shop.payment?.qrCode || shop.paymentQrCode || '',
+  displayName: shop.payment?.displayName || shop.shopName,
+  instructions: shop.payment?.instructions || '',
+});
+
+export const getMyPaymentSettings = async (req, res) => {
+  try {
+    const shop = await Shop.findOne({ ownerId: req.user._id });
+    if (!shop) return res.status(404).json({ message: 'Create a shop before configuring payment settings' });
+    res.json(paymentResponse(shop));
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to fetch payment settings' });
+  }
+};
+
+export const updateMyPaymentSettings = async (req, res) => {
+  try {
+    const shop = await Shop.findOne({ ownerId: req.user._id });
+    if (!shop) return res.status(404).json({ message: 'Create a shop before configuring payment settings' });
+
+    const { upiId, qrCode, displayName, instructions } = req.body;
+    if (upiId !== undefined && upiId && !/^[^\s@]+@[^\s@]+$/.test(upiId.trim())) {
+      return res.status(400).json({ message: 'Enter a valid UPI ID, such as name@upi' });
+    }
+    if (qrCode !== undefined && !isValidQrCode(qrCode)) {
+      return res.status(400).json({ message: 'QR code must be a supported image under 5 MB' });
+    }
+
+    shop.payment = {
+      upiId: upiId === undefined ? shop.payment?.upiId || '' : upiId.trim(),
+      qrCode: qrCode === undefined ? shop.payment?.qrCode || shop.paymentQrCode || '' : qrCode,
+      displayName: displayName === undefined ? shop.payment?.displayName || shop.shopName : displayName.trim(),
+      instructions: instructions === undefined ? shop.payment?.instructions || '' : instructions.trim(),
+    };
+    shop.paymentQrCode = shop.payment.qrCode;
+    await shop.save();
+    res.json(paymentResponse(shop));
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to save payment settings' });
   }
 };
 
@@ -149,6 +209,10 @@ export const updateShop = async (req, res) => {
 
     if (!shop) {
       return res.status(403).json({ message: 'You can only update your own shop' });
+    }
+
+    if (req.body.paymentQrCode !== undefined && !isValidQrCode(req.body.paymentQrCode)) {
+      return res.status(400).json({ message: 'QR code must be a supported image under 5 MB' });
     }
 
     const fields = ['shopName', 'logo', 'paymentQrCode', 'description', 'address', 'city', 'category', 'contactNumber'];
