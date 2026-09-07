@@ -2,11 +2,13 @@ import Order from '../models/Order.js';
 import Shop from '../models/Shop.js';
 import Product from '../models/Product.js';
 import Offer from '../models/Offer.js';
+import Coupon from '../models/Coupon.js';
 import { calculateDiscountedPrice, isOfferCurrentlyActive } from '../utils/pricing.js';
+import { validateAndCalculateCoupon } from '../utils/couponService.js';
 
 export const createOrder = async (req, res) => {
   try {
-    const { shopId, products, totalAmount, paymentStatus, orderStatus } = req.body;
+    const { shopId, products, couponCode, couponId, paymentStatus, orderStatus } = req.body;
 
     const shop = await Shop.findById(shopId);
     if (!shop) return res.status(404).json({ message: 'Shop not found' });
@@ -46,7 +48,18 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const serverTotal = serverProducts.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const serverSubtotal = serverProducts.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    let couponResult = null;
+    if (couponCode || couponId) {
+      couponResult = await validateAndCalculateCoupon({
+        couponCode,
+        shopId,
+        cartItems: products.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+      });
+      if (couponResult.status) return res.status(couponResult.status).json({ message: couponResult.message });
+    }
+    const couponDiscount = couponResult?.discount || 0;
+    const serverTotal = Math.max(serverSubtotal - couponDiscount, 0);
 
     const order = await Order.create({
       userId: req.user._id,
@@ -54,9 +67,19 @@ export const createOrder = async (req, res) => {
       ownerId: shop.ownerId,
       products: serverProducts,
       totalAmount: Math.round(serverTotal * 100) / 100,
+      couponId: couponResult?.coupon?._id,
+      couponCode: couponResult?.couponCode || '',
+      couponDiscount,
       paymentStatus: paymentStatus || 'Pending',
       orderStatus: orderStatus || 'Pending',
     });
+
+    if (couponResult?.coupon?._id) {
+      await Coupon.findOneAndUpdate(
+        { _id: couponResult.coupon._id, usedCount: { $lt: couponResult.coupon.usageLimit } },
+        { $inc: { usedCount: 1 } }
+      );
+    }
 
     res.status(201).json(order);
   } catch (error) {

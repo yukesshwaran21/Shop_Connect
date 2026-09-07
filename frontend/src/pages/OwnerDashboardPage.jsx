@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import OwnerOfferManagement from '../components/OwnerOfferManagement';
+import OwnerCouponManagement from '../components/OwnerCouponManagement';
 
 const emptyForm = {
   shopName: '',
@@ -309,6 +310,7 @@ export default function OwnerDashboardPage() {
       </form>
 
       <OwnerOfferManagement products={products} />
+      <OwnerCouponManagement products={products} />
     </div>
   );
 }

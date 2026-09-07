@@ -1,4 +1,5 @@
 import Shop from '../models/Shop.js';
+import Product from '../models/Product.js';
 
 export const getShops = async (req, res) => {
   try {
@@ -69,7 +70,15 @@ export const getShopById = async (req, res) => {
       return res.status(403).json({ message: 'You do not have access to this shop' });
     }
 
-    res.json(shop);
+    res.json({
+      _id: shop._id,
+      shopName: shop.shopName,
+      logo: shop.logo,
+      description: shop.description,
+      address: shop.address,
+      city: shop.city,
+      contactNumber: shop.contactNumber,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to fetch shop' });
   }
@@ -78,15 +87,56 @@ export const getShopById = async (req, res) => {
 export const searchShops = async (req, res) => {
   try {
     const { category, city } = req.query;
+    if (!category?.trim() || !city?.trim()) {
+      return res.status(400).json({ message: 'Category and city are required' });
+    }
 
-    const filter = {};
-    if (category) filter.category = new RegExp(category, 'i');
-    if (city) filter.city = new RegExp(city, 'i');
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const shops = await Product.aggregate([
+      { $match: { category: { $regex: `^${escapeRegex(category.trim())}$`, $options: 'i' } } },
+      {
+        $lookup: {
+          from: 'shops',
+          localField: 'shopId',
+          foreignField: '_id',
+          as: 'shop',
+        },
+      },
+      { $unwind: '$shop' },
+      { $match: { 'shop.city': { $regex: `^${escapeRegex(city.trim())}$`, $options: 'i' } } },
+      {
+        $group: {
+          _id: '$shop._id',
+          shopName: { $first: '$shop.shopName' },
+          logo: { $first: '$shop.logo' },
+          description: { $first: '$shop.description' },
+          city: { $first: '$shop.city' },
+          address: { $first: '$shop.address' },
+          contactNumber: { $first: '$shop.contactNumber' },
+          categories: { $addToSet: '$category' },
+        },
+      },
+      { $sort: { shopName: 1 } },
+    ]);
 
-    const shops = await Shop.find(filter).sort({ createdAt: -1 });
-    res.json(shops);
+    res.json({ success: true, shops });
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to search shops' });
+  }
+};
+
+export const getDiscoveryOptions = async (req, res) => {
+  try {
+    const [categories, cities] = await Promise.all([
+      Product.distinct('category'),
+      Shop.distinct('city'),
+    ]);
+    res.json({
+      categories: categories.filter(Boolean).sort((a, b) => a.localeCompare(b)),
+      cities: cities.filter(Boolean).sort((a, b) => a.localeCompare(b)),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to load discovery options' });
   }
 };
 

@@ -1,11 +1,12 @@
 import express from 'express';
-import { createShop, getMyShops, getShops, getShopById, searchShops, updateShop } from '../controllers/shopController.js';
+import { createShop, getDiscoveryOptions, getMyShops, getShops, getShopById, searchShops, updateShop } from '../controllers/shopController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.get('/', getShops);
 router.get('/my-shops', protect, authorizeRoles('SHOP_OWNER'), getMyShops);
+router.get('/discovery-options', getDiscoveryOptions);
 router.get('/search', searchShops);
 router.get('/:shopId', (req, res, next) => {
   const authHeader = req.headers.authorization;

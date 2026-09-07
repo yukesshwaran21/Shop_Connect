@@ -99,6 +99,18 @@ button, input, select {
   padding: 16px;
 }
 
+.shop-logo, .shop-detail-logo {
+  width: 100%;
+  max-width: 180px;
+  height: 120px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.shop-detail-logo {
+  width: 180px;
+}
+
 .hero {
   background: linear-gradient(135deg, #10223d, #1f7ae0);
   color: white;
@@ -111,3 +123,13 @@ button, input, select {
 .text-muted { color: #67758a; }
 
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  .navbar, .row { align-items: stretch; }
+  .navbar { flex-direction: column; gap: 12px; }
+  .nav-links, .search-bar { grid-template-columns: 1fr; width: 100%; }
+  .search-bar { display: grid; }
+}

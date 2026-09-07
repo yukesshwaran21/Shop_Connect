@@ -33,6 +33,9 @@ const orderSchema = new mongoose.Schema(
     },
     products: [orderItemSchema],
     totalAmount: { type: Number, required: true, min: 0 },
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon' },
+    couponCode: { type: String, default: '' },
+    couponDiscount: { type: Number, default: 0, min: 0 },
     paymentStatus: {
       type: String,
       enum: ['Pending', 'Paid', 'Failed'],

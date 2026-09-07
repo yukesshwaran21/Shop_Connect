@@ -8,12 +8,20 @@ export default function ShopDetailsPage() {
   const { addToCart } = useCart();
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!shopId) return;
 
-    api.get(`/shops/${shopId}`).then((response) => setShop(response.data));
-    api.get(`/products/shop/${shopId}`).then(async (response) => {
+    setLoading(true);
+    setError('');
+    Promise.all([
+      api.get(`/shops/${shopId}`),
+      api.get(`/products/shop/${shopId}`),
+    ]).then(async ([shopResponse, productsResponse]) => {
+      setShop(shopResponse.data);
+      const response = { data: productsResponse.data };
       const productsWithOffers = await Promise.all(response.data.map(async (product) => {
         try {
           const offerResponse = await api.get(`/offers/product/${product._id}`);
@@ -24,14 +32,17 @@ export default function ShopDetailsPage() {
         }
       }));
       setProducts(productsWithOffers);
-    });
+    }).catch(() => setError('Unable to load this shop right now.'))
+      .finally(() => setLoading(false));
   }, [shopId]);
 
-  if (!shop) return <div className="container">Loading...</div>;
+  if (loading) return <div className="container">Loading shop...</div>;
+  if (error || !shop) return <div className="container">{error || 'Shop not found.'}</div>;
 
   return (
     <div className="container">
       <div className="card mb-2">
+        {shop.logo && <img className="shop-detail-logo" src={shop.logo} alt={`${shop.shopName} logo`} />}
         <h2>{shop.shopName}</h2>
         <p>{shop.description}</p>
         <p>City: {shop.city}</p>
@@ -53,9 +64,9 @@ export default function ShopDetailsPage() {
                 <p>Offer Price: ₹{product.currentPrice}</p>
               </>
             ) : <p>Selling: ₹{product.sellingPrice}</p>}
-            <p>Stock: {product.stock}</p>
-            <button className="button" type="button" onClick={() => addToCart(product, shop)}>
-              Add to Cart
+            <p>{product.stock > 0 ? `Stock available: ${product.stock}` : 'Out of Stock'}</p>
+            <button className="button" type="button" disabled={product.stock === 0} onClick={() => addToCart(product, shop)}>
+              {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
             </button>
           </div>
         ))}
