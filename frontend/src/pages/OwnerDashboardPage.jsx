@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import OwnerOfferManagement from '../components/OwnerOfferManagement';
 
 const emptyForm = {
   shopName: '',
@@ -306,6 +307,8 @@ export default function OwnerDashboardPage() {
         </button>{' '}
         {editingProductId && <button className="button" type="button" onClick={() => { setEditingProductId(null); setProductForm(emptyProduct); }}>Cancel Edit</button>}
       </form>
+
+      <OwnerOfferManagement products={products} />
     </div>
   );
 }

@@ -13,7 +13,18 @@ export default function ShopDetailsPage() {
     if (!shopId) return;
 
     api.get(`/shops/${shopId}`).then((response) => setShop(response.data));
-    api.get(`/products/shop/${shopId}`).then((response) => setProducts(response.data));
+    api.get(`/products/shop/${shopId}`).then(async (response) => {
+      const productsWithOffers = await Promise.all(response.data.map(async (product) => {
+        try {
+          const offerResponse = await api.get(`/offers/product/${product._id}`);
+          const offer = offerResponse.data[0];
+          return offer ? { ...product, activeOffer: offer, currentPrice: offer.finalPrice } : product;
+        } catch (error) {
+          return product;
+        }
+      }));
+      setProducts(productsWithOffers);
+    });
   }, [shopId]);
 
   if (!shop) return <div className="container">Loading...</div>;
@@ -36,7 +47,12 @@ export default function ShopDetailsPage() {
             <p>{product.brand}</p>
             <p>{product.description}</p>
             <p>Original: ₹{product.originalPrice}</p>
-            <p>Selling: ₹{product.sellingPrice}</p>
+            {product.activeOffer ? (
+              <>
+                <p>Offer: {product.activeOffer.discountType === 'PERCENTAGE' ? `${product.activeOffer.discountValue}% OFF` : `₹${product.activeOffer.discountValue} OFF`}</p>
+                <p>Offer Price: ₹{product.currentPrice}</p>
+              </>
+            ) : <p>Selling: ₹{product.sellingPrice}</p>}
             <p>Stock: {product.stock}</p>
             <button className="button" type="button" onClick={() => addToCart(product, shop)}>
               Add to Cart

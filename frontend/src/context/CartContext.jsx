@@ -30,7 +30,7 @@ export default function CartProvider({ children }) {
         {
           productId: product._id,
           name: product.productName,
-          price: product.sellingPrice,
+          price: product.currentPrice ?? product.sellingPrice,
           quantity: 1,
           shopId: shop?._id || null,
           shopName: shop?.shopName || '',
