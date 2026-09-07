@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import OwnerOfferManagement from '../components/OwnerOfferManagement';
 import OwnerCouponManagement from '../components/OwnerCouponManagement';
+import OwnerOrderManagement from '../components/OwnerOrderManagement';
 
 const emptyForm = {
   shopName: '',
@@ -311,6 +312,7 @@ export default function OwnerDashboardPage() {
 
       <OwnerOfferManagement products={products} />
       <OwnerCouponManagement products={products} />
+      <OwnerOrderManagement />
     </div>
   );
 }

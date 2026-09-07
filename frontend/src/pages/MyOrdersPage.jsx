@@ -3,25 +3,30 @@ import api, { getAuthHeaders } from '../services/api';
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .get('/orders/my-orders', { headers: getAuthHeaders() })
       .then((response) => setOrders(response.data))
-      .catch(() => setOrders([]));
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="container">
       <div className="card">
         <h2>My Orders</h2>
-        {orders.length === 0 ? (
+        {loading ? <p>Loading orders...</p> : orders.length === 0 ? (
           <p className="text-muted">No orders placed yet.</p>
         ) : (
           orders.map((order) => (
             <div key={order._id} className="card mb-2">
               <p>Order ID: {order._id}</p>
+              <p>Shop: {order.shopId?.shopName || 'Shop'}</p>
+              <p>Order date: {new Date(order.createdAt).toLocaleString()}</p>
               <p>Amount: ₹{order.totalAmount}</p>
+              {order.couponCode && <p>Coupon: {order.couponCode} (-₹{order.couponDiscount})</p>}
               <p>Payment: {order.paymentStatus}</p>
               <p>Status: {order.orderStatus}</p>
               <ul>

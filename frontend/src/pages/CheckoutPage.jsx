@@ -10,6 +10,8 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponMessage, setCouponMessage] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [order, setOrder] = useState(null);
+  const [delivery, setDelivery] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', pincode: '' });
 
   const applyCoupon = async () => {
     setCouponMessage('');
@@ -42,15 +44,16 @@ export default function CheckoutPage() {
       totalAmount: appliedCoupon?.finalAmount ?? subtotal,
       couponCode: appliedCoupon?.couponCode,
       couponId: appliedCoupon?.couponId,
+      deliveryAddress: delivery,
       paymentStatus: 'Pending',
       orderStatus: 'Pending',
     };
 
     setPlacingOrder(true);
     try {
-      await api.post('/orders', payload, { headers: getAuthHeaders() });
+      const response = await api.post('/orders', payload, { headers: getAuthHeaders() });
+      setOrder(response.data);
       clearCart();
-      navigate('/my-orders');
     } catch (error) {
       setCouponMessage(error.response?.data?.message || 'Unable to place order.');
     } finally { setPlacingOrder(false); }
@@ -60,10 +63,21 @@ export default function CheckoutPage() {
     <div className="container">
       <div className="card">
         <h2>Checkout</h2>
-        {items.length === 0 ? (
+        {order ? (
+          <>
+            <h3>Order Placed Successfully!</h3>
+            <p>Order ID: {order._id}</p>
+            <p>Total: ₹{order.totalAmount}</p>
+            <p>Payment: Pending</p>
+            <p>Status: Pending</p>
+            <button className="button" type="button" onClick={() => navigate('/my-orders')}>View My Orders</button>
+          </>
+        ) : items.length === 0 ? (
           <p className="text-muted">No items to order.</p>
         ) : (
           <>
+            <h3>Delivery information</h3>
+            {Object.keys(delivery).map((field) => <input key={field} className="input" name={field} value={delivery[field]} onChange={(event) => setDelivery({ ...delivery, [field]: event.target.value })} placeholder={field[0].toUpperCase() + field.slice(1)} required={field !== 'email'} type={field === 'email' ? 'email' : 'text'} />)}
             {items.map((item) => (
               <div key={item.productId} className="row mb-2">
                 <span>{item.name}</span>

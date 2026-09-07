@@ -1,15 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
 
 export default function ShopDetailsPage() {
   const { shopId } = useParams();
-  const { addToCart } = useCart();
+  const navigate = useNavigate();
+  const { addToCart, cartMessage } = useCart();
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addedProductId, setAddedProductId] = useState(null);
+
+  const handleAddToCart = (product) => {
+    if (!localStorage.getItem('token')) {
+      navigate('/login');
+      return;
+    }
+    const added = addToCart(product, shop);
+    if (added) {
+      setAddedProductId(product._id);
+      window.setTimeout(() => setAddedProductId(null), 1500);
+    }
+  };
 
   useEffect(() => {
     if (!shopId) return;
@@ -51,6 +66,7 @@ export default function ShopDetailsPage() {
       </div>
 
       <h3>Products</h3>
+      {cartMessage && <p>{cartMessage}</p>}
       <div className="grid grid-3">
         {products.map((product) => (
           <div className="card" key={product._id}>
@@ -65,8 +81,8 @@ export default function ShopDetailsPage() {
               </>
             ) : <p>Selling: ₹{product.sellingPrice}</p>}
             <p>{product.stock > 0 ? `Stock available: ${product.stock}` : 'Out of Stock'}</p>
-            <button className="button" type="button" disabled={product.stock === 0} onClick={() => addToCart(product, shop)}>
-              {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+            <button className="button" type="button" disabled={product.stock === 0} onClick={() => handleAddToCart(product)}>
+              {product.stock === 0 ? 'Out of Stock' : addedProductId === product._id ? 'Added to Cart' : 'Add to Cart'}
             </button>
           </div>
         ))}

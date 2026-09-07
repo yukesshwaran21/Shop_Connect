@@ -1,5 +1,7 @@
 import Coupon from '../models/Coupon.js';
 import Product from '../models/Product.js';
+import Offer from '../models/Offer.js';
+import { calculateDiscountedPrice, isOfferCurrentlyActive } from './pricing.js';
 
 const normalizeList = (value) => {
   if (value === undefined || value === null) return [];
@@ -52,17 +54,36 @@ export const validateAndCalculateCoupon = async ({ couponCode, shopId, cartItems
 
   if (normalizedItems.some(({ quantity }) => !Number.isInteger(quantity) || quantity < 1)) return { status: 400, message: 'Invalid cart quantity' };
 
-  const subtotal = normalizedItems.reduce((sum, { product, quantity }) => sum + product.sellingPrice * quantity, 0);
+  const offers = await Offer.find({
+    productId: { $in: productIds },
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+  });
+  const offerMap = new Map();
+  offers.forEach((offer) => {
+    if (!offerMap.has(offer.productId.toString()) && isOfferCurrentlyActive(offer, now)) {
+      offerMap.set(offer.productId.toString(), offer);
+    }
+  });
+  const pricedItems = normalizedItems.map(({ product, quantity }) => {
+    const offer = offerMap.get(product._id.toString());
+    const unitPrice = offer
+      ? calculateDiscountedPrice(product.sellingPrice, offer.discountType, offer.discountValue)
+      : product.sellingPrice;
+    return { product, quantity, unitPrice };
+  });
+  const subtotal = pricedItems.reduce((sum, { unitPrice, quantity }) => sum + unitPrice * quantity, 0);
   if (subtotal < coupon.minimumPurchase) return { status: 422, message: `Minimum purchase of ₹${coupon.minimumPurchase} is required` };
 
   const applicableProducts = normalizeList(coupon.applicableProducts?.length ? coupon.applicableProducts : coupon.applicableProduct);
   const applicableBrands = normalizeList(coupon.applicableBrands?.length ? coupon.applicableBrands : coupon.applicableBrand);
   const applicableCategories = normalizeList(coupon.applicableCategories?.length ? coupon.applicableCategories : coupon.applicableCategory);
-  const eligibleSubtotal = normalizedItems.reduce((sum, { product, quantity }) => {
+  const eligibleSubtotal = pricedItems.reduce((sum, { product, quantity, unitPrice }) => {
     const matches = applicableProducts.length === 0 || applicableProducts.map(String).includes(product._id.toString());
     const brandMatches = matchesRestriction(applicableBrands, product.brand);
     const categoryMatches = matchesRestriction(applicableCategories, product.category);
-    return matches && brandMatches && categoryMatches ? sum + product.sellingPrice * quantity : sum;
+    return matches && brandMatches && categoryMatches ? sum + unitPrice * quantity : sum;
   }, 0);
 
   if (eligibleSubtotal <= 0) return { status: 422, message: 'Coupon is not applicable to the selected products' };
@@ -79,6 +100,7 @@ export const validateAndCalculateCoupon = async ({ couponCode, shopId, cartItems
     couponCode: coupon.couponCode,
     subtotal: Math.round(subtotal * 100) / 100,
     eligibleSubtotal: Math.round(eligibleSubtotal * 100) / 100,
+    pricedItems,
     discount,
     finalAmount: Math.round(Math.max(subtotal - discount, 0) * 100) / 100,
   };
